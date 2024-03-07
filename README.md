@@ -12,9 +12,9 @@ SimuCell3D is a C++ cell-based simulation framework designed to simulate tissues
 
 <br>
 
-## Manual installation on linux
+## Manual installation on linux and Windows
 
-Windows user can manually install SimuCell3D on their machine via a Windows Linux Subsystem ([WSL](https://learn.microsoft.com/en-us/windows/wsl/install)).
+Windows users can manually install SimuCell3D on their machines via a Windows Linux Subsystem ([WSL](https://learn.microsoft.com/en-us/windows/wsl/install)).
 
 ### Requirements
 - GCC compiler at version 9 or higher
@@ -24,7 +24,7 @@ Windows user can manually install SimuCell3D on their machine via a Windows Linu
 <strong>1.</strong> Clone this git repository
 
 ```
-git clone https://github.com/SteveRunser/SimuCell3D_v2.git
+git clone https://git.bsse.ethz.ch/iber/Publications/2024_runser_simucell3d.git
 ```
 
 <br>
@@ -51,12 +51,12 @@ cmake -DCMAKE_BUILD_TYPE=Release .. && make -j4
 <strong>1.</strong> Clone this git repository
 
 ```
-git clone https://github.com/SteveRunser/SimuCell3D_v2.git
+git clone https://git.bsse.ethz.ch/iber/Publications/2024_runser_simucell3d.git
 cd path/to/SimuCell3D/
 ```
 
 <br>
-<strong>2.</strong> Create the docker image
+<strong>2.</strong> Create a docker image
 
 ```
 docker build -t simucell3d_docker_img .
