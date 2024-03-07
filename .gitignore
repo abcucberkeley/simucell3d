@@ -1,0 +1,8 @@
+build*
+.vscode/
+*.pyc
+venv*
+*env
+env*
+artificial_image_generation/
+simulation_results/

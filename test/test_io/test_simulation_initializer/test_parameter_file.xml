@@ -1,0 +1,397 @@
+   
+<?xml version="1.0"?>
+
+<numerical_parameters>
+    <!-- The mesh file containing the initial configuration <! -->
+    <input_mesh_file_path>test/test_io/test_simulation_initializer/2_spheres.vtk</input_mesh_file_path> 
+
+    <!-- The path where the mesh files will be written <! -->
+    <output_mesh_folder_path>./simulation_results</output_mesh_folder_path> 
+
+    <!-- The damping coefficients [M / T] <! -->
+    <damping_coefficient>1000000.0</damping_coefficient> 
+
+    <!-- If equals 0 the cells will not be triangulated at the beginning of the simulation \<! -->
+    <perform_initial_triangulation>1</perform_initial_triangulation> 
+
+    <!-- The total simulation time [T] <! -->
+    <simulation_duration>0.001</simulation_duration> 
+
+    <!-- The time between each mesh file saving [T]<! -->
+    <sampling_period>1e-06</sampling_period> 
+
+    <!-- The simulation time step [T]<! -->
+    <time_step>1e-07</time_step> 
+
+    <!-- The minimum edge length allowed [L] <! -->
+    <min_edge_length>6e-07</min_edge_length> 
+
+    <!-- The interaction cutoff distance above which cell-cell interactions are not considered anymore[L]<! -->
+    <contact_cutoff_adhesion>2.5e-07</contact_cutoff_adhesion> 
+    <contact_cutoff_repulsion>2.5e-07</contact_cutoff_repulsion> 
+
+    <!-- The maximum force in Newtons that can be applied to a node [M L / T^2]<! -->
+    <!-- It can be set to "inf" if you do not wish to cap the forces of the nodes <! -->
+    <enable_edge_swap_operation>1</enable_edge_swap_operation> 
+</numerical_parameters>
+
+
+<cell_types>
+    <cell_type>
+        <!-- The name of the cell type <! -->
+        <cell_type_name>epithelial</cell_type_name> 
+
+        <!-- The ID of the cell type <! -->
+        <global_cell_id>0</global_cell_id>  
+
+        <!-- The cell density [M /(L^3)]<! -->
+        <cell_mass_density>1.0e3</cell_mass_density> 
+
+        <!-- The bulk modulus of the cells [M /(L T^2)] <! -->
+        <cell_bulk_modulus>2500</cell_bulk_modulus> 
+
+        <!-- The maximal inner pressure of a cell. Set to INF to have no pressure limit [M / (T^2 L)] <! -->
+        <max_inner_pressure>INF</max_inner_pressure> 
+
+        <!-- Growth rate = cellDivisionTargetVolume / cellCycleDuration [L^3 / T]<! -->
+        <avg_growth_rate>1e-12</avg_growth_rate> 
+        <std_growth_rate>0</std_growth_rate> 
+
+        <!-- Isoperimetric ratio = cellArea^3 / cellVolume^2 <! -->
+        <target_isoperimetric_ratio>130</target_isoperimetric_ratio> 
+
+        <!-- The elastic modulus of the cell membranes [M / (T^2 L^2)] <! -->
+        <area_elasticity_modulus>0</area_elasticity_modulus> 
+
+        <!-- The forces at which the links between the epithelial cells are broken  [M L / T^2] <! -->
+        <surface_coupling_max_curvature>1e-11</surface_coupling_max_curvature>
+
+
+        <angle_regularization_factor>0</angle_regularization_factor>
+        
+        <!-- The volume that the cell has to reach before division [L^3] (Drawn from a normal distribution)<! -->
+        <avg_division_volume>2e-16</avg_division_volume> 
+        <std_division_volume>0</std_division_volume> 
+
+
+        <!-- Growth rate = cellDivisionTargetVolume / cellCycleDuration [L^3 / T]<! -->
+        <!-- If the cell reach this volume we delete it[L^3]<! -->
+        <min_vol>1e-18</min_vol> 
+
+        <!-- The cell might have different face types with different mechanical properties <! -->
+        <face_types>     
+            <face_type>           
+                <global_face_id>0</global_face_id>
+
+                <face_type_name>apical</face_type_name>
+
+                <!-- Modulate the adherence between cells [(M / (T^2 L^2)] <! -->
+                <adherence_strength>2.2e9</adherence_strength>
+
+                <!-- Modulate the repulsion between cells [(M / (T^2 L^2)] <! -->
+                <repulsion_strength>1e9</repulsion_strength> 
+
+                <!-- The surface tension of the cell membranes [M / T^2] <! -->
+                <surface_tension>1e-3</surface_tension> 
+
+                <!-- The bending elasticity of the cell surface [M L^2 / T^2] <! -->
+                <bending_modulus>2e-18</bending_modulus> 
+            </face_type>
+
+            <face_type>           
+                <global_face_id>1</global_face_id>
+
+                <face_type_name>lateral</face_type_name>
+
+                <!-- Modulate the adherence between cells [M / (T^2 L^2)] <! -->
+                <adherence_strength>2.2e9</adherence_strength>
+
+                <!-- Modulate the repulsion between cells [(M / (T^2 L^2)] <! -->
+                <repulsion_strength>1e9</repulsion_strength> 
+
+                <!-- The surface tension of the cell membranes [M / T^2] <! -->
+                <surface_tension>1e-3</surface_tension> 
+
+                <!-- The bending elasticity of the cell surface [M L^2 / T^2] <! -->
+                <bending_modulus>2e-18</bending_modulus> 
+            </face_type>
+
+           <face_type>           
+                <global_face_id>2</global_face_id>
+
+                <face_type_name>basal</face_type_name>
+
+                <!-- Modulate the adherence between cells [M / (T^2 L^2)] <! -->
+                <adherence_strength>2.2e9</adherence_strength>
+
+                <!-- Modulate the repulsion between cells [M / (T^2 L^2)] <! -->
+                <repulsion_strength>1e9</repulsion_strength> 
+
+                <!-- The surface tension of the cell membranes [M / T^2] <! -->
+                <surface_tension>1e-3</surface_tension> 
+
+                <!-- The bending elasticity of the cell surface [M L^2 / T^2] <! -->
+                <bending_modulus>2e-18</bending_modulus> 
+            </face_type>
+        </face_types>  
+    </cell_type>
+
+    <cell_type>
+        <!-- The ID of the cell type <! -->
+        <global_cell_id>1</global_cell_id>  
+
+        <!-- The name of the cell type <! -->
+        <cell_type_name>ecm</cell_type_name> 
+
+        <!-- The cell density [M /(L^3)]<! -->
+        <cell_mass_density>1.0e3</cell_mass_density> 
+
+        <!-- The bulk modulus of the cells [M /(L T^2)] <! -->
+        <cell_bulk_modulus>0.0</cell_bulk_modulus> 
+
+        <!-- The maximal inner pressure of a cell. Set to INF to have no pressure limit [M / (T^2 L)] <! -->
+        <max_inner_pressure>INF</max_inner_pressure> 
+
+        <!-- Growth rate = cellDivisionTargetVolume / cellCycleDuration [L^3 / T]<! -->
+        <avg_growth_rate>0.0</avg_growth_rate> 
+        <std_growth_rate>0.0</std_growth_rate> 
+
+
+        <!-- Isoperimetric ratio = cellArea^3 / cellVolume^2 <! -->
+        <target_isoperimetric_ratio>1</target_isoperimetric_ratio> 
+
+        <!-- The elastic modulus of the cell membranes [M / (T^2 L^2)] <! -->
+        <area_elasticity_modulus>0</area_elasticity_modulus> 
+
+        <angle_regularization_factor>0</angle_regularization_factor>
+
+        <!-- The forces at which the links between the epithelial cells are broken  [M L / T^2] <! -->
+        <surface_coupling_max_curvature>1e-11</surface_coupling_max_curvature>
+
+
+        <!-- The volume that the cell has to reach before division [L^3]<! -->
+        <avg_division_volume>0.0</avg_division_volume> 
+        <std_division_volume>0.0</std_division_volume> 
+
+        <!-- Growth rate = cellDivisionTargetVolume / cellCycleDuration [L^3 / T]<! -->
+
+        <!-- If the cell reach this volume we delete it[L^3]<! -->
+        <min_vol>1e-18</min_vol> 
+
+        <!-- The cell might have different face types with different mechanical properties <! -->
+        <face_types>     
+            <face_type>           
+                <global_face_id>3</global_face_id>
+
+                <face_type_name>ecm_face</face_type_name>
+
+                <!-- Modulate the adherence between cells [(M / (T^2 L^2)] <! -->
+                <adherence_strength>2.2e9</adherence_strength>
+
+                <!-- Modulate the repulsion between cells [(M / (T^2 L^2)] <! -->
+                <repulsion_strength>1e9</repulsion_strength> 
+
+                <!-- The surface tension of the cell membranes [M / T^2] <! -->
+                <surface_tension>5.0e-4</surface_tension> 
+
+                <!-- The bending elasticity of the cell surface [M L^2 / T^2] <! -->
+                <bending_modulus>0.0</bending_modulus> 
+            </face_type>
+        </face_types>  
+    </cell_type>
+
+
+    <cell_type>
+        <!-- The ID of the cell type <! -->
+        <global_cell_id>2</global_cell_id>  
+
+        <!-- The name of the cell type <! -->
+        <cell_type_name>lumen</cell_type_name> 
+
+        <!-- The cell density [M /(L^3)]<! -->
+        <cell_mass_density>1.0e3</cell_mass_density> 
+
+        <!-- The bulk modulus of the cells [M /(L T^2)] <! -->
+        <cell_bulk_modulus>2.5e3</cell_bulk_modulus> 
+
+        <!-- The maximal inner pressure of a cell. Set to INF to have no pressure limit [M / (T^2 L)] <! -->
+        <max_inner_pressure>INF</max_inner_pressure> 
+
+        <!-- Growth rate = cellDivisionTargetVolume / cellCycleDuration [L^3 / T]<! -->
+        <avg_growth_rate>0.0</avg_growth_rate> 
+        <std_growth_rate>0.0</std_growth_rate> 
+
+        <!-- The elastic modulus of the cell membranes [M / (T^2 L^2)] <! -->
+        <area_elasticity_modulus>0</area_elasticity_modulus> 
+
+        <!-- The forces at which the links between the epithelial cells are broken  [M L / T^2] <! -->
+        <surface_coupling_max_curvature>1e-11</surface_coupling_max_curvature>
+
+        <angle_regularization_factor>0</angle_regularization_factor>
+
+
+        <!-- Isoperimetric ratio = cellArea^3 / cellVolume^2 <! -->
+        <target_isoperimetric_ratio>1</target_isoperimetric_ratio> 
+
+        <!-- The volume that the cell has to reach before division [L^3]<! -->
+        <avg_division_volume>0.0</avg_division_volume> 
+        <std_division_volume>0.0</std_division_volume> 
+
+        <!-- Growth rate = cellDivisionTargetVolume / cellCycleDuration [L^3 / T]<! -->
+
+        <!-- If the cell reach this volume we delete it[L^3]<! -->
+        <min_vol>1e-18</min_vol> 
+
+        <!-- The cell might have different face types with different mechanical properties <! -->
+        <face_types>     
+            <face_type>           
+                <global_face_id>4</global_face_id>
+
+                <face_type_name>lumen_face</face_type_name>
+
+                <!-- Modulate the adherence between cells [(M / (T^2 L^2)] <! -->
+                <adherence_strength>0.0</adherence_strength>
+
+                <!-- Modulate the repulsion between cells [(M / (T^2 L^2)] <! -->
+                <repulsion_strength>5.0e9</repulsion_strength> 
+
+                <!-- The surface tension of the cell membranes [M / T^2] <! -->
+                <surface_tension>4e-4</surface_tension> 
+
+                <!-- The bending elasticity of the cell surface [M L^2 / T^2] <! -->
+                <bending_modulus>0.0</bending_modulus> 
+            </face_type>
+        </face_types>  
+    </cell_type>
+
+    <cell_type>
+        <!-- The ID of the cell type <! -->
+        <global_cell_id>3</global_cell_id>  
+
+        <!-- The name of the cell type <! -->
+        <cell_type_name>nucleus</cell_type_name> 
+
+        <!-- The cell density [M /(L^3)]<! -->
+        <cell_mass_density>1.0e3</cell_mass_density> 
+        
+        <!-- The bulk modulus of the cells [M /(L T^2)] <! -->
+        <cell_bulk_modulus>2500</cell_bulk_modulus> 
+
+        <!-- The maximal inner pressure of a cell. Set to INF to have no pressure limit [M / (T^2 L)] <! -->
+        <max_inner_pressure>INF</max_inner_pressure> 
+
+        <!-- Growth rate = cellDivisionTargetVolume / cellCycleDuration [L^3 / T]<! -->
+        <avg_growth_rate>0.0</avg_growth_rate> 
+        <std_growth_rate>0.0</std_growth_rate> 
+
+        <!-- Isoperimetric ratio = cellArea^3 / cellVolume^2 <! -->
+        <target_isoperimetric_ratio>1</target_isoperimetric_ratio> 
+
+        <angle_regularization_factor>0</angle_regularization_factor>
+
+        <!-- The elastic modulus of the cell membranes [M / (T^2 L^2)] <! -->
+        <area_elasticity_modulus>0</area_elasticity_modulus> 
+
+
+        <!-- The forces at which the links between the epithelial cells are broken  [M L / T^2] <! -->
+        <surface_coupling_max_curvature>1e-11</surface_coupling_max_curvature>
+
+
+        <!-- The volume that the cell has to reach before division [L^3]<! -->
+        <avg_division_volume>0.0</avg_division_volume>
+        <std_division_volume>0.0</std_division_volume> 
+
+        <!-- Growth rate = cellDivisionTargetVolume / cellCycleDuration [L^3 / T]<! -->
+
+        <!-- If the cell reach this volume we delete it[L^3]<! -->
+        <min_vol>1e-18</min_vol> 
+
+        <!-- The force applied to the nucleus to simulmate the INM [M L / T^2]<! -->
+        <INMForce>0</INMForce> 
+
+        <!-- The cell might have different face types with different mechanical properties <! -->
+        <face_types>     
+            <face_type>           
+                <global_face_id>5</global_face_id>
+
+                <face_type_name>nucleus_face</face_type_name>
+
+                <!-- Modulate the adherence between cells [(M / (T^2 L^2)] <! -->
+                <adherence_strength>0.0</adherence_strength>
+
+                <!-- Modulate the repulsion between cells [(M / (T^2 L^2)] <! -->
+                <repulsion_strength>1e9</repulsion_strength> 
+
+                <!-- The surface tension of the cell membranes [M / T^2] <! -->
+                <surface_tension>0</surface_tension> 
+
+                <!-- The bending elasticity of the cell surface [M L^2 / T^2] <! -->
+                <bending_modulus>0.0</bending_modulus> 
+            </face_type>
+        </face_types>  
+    </cell_type>
+
+    <cell_type>
+        <!-- The ID of the cell type <! -->
+        <global_cell_id>4</global_cell_id>  
+
+        <!-- The name of the cell type <! -->
+        <cell_type_name>static_cell</cell_type_name> 
+
+        <!-- The cell density [M /(L^3)]<! -->
+        <cell_mass_density>1.04</cell_mass_density> 
+
+        <!-- The bulk modulus of the cells [M / (T^2 L^4)] <! -->
+        <cell_bulk_modulus>2.5e-7</cell_bulk_modulus> 
+
+        <!-- The maximal inner pressure of a cell. Set to INF to have no pressure limit [M / (T^2 L)] <! -->
+        <max_inner_pressure>INF</max_inner_pressure> 
+
+        <!-- Growth rate = cellDivisionTargetVolume / cellCycleDuration [L^3 / T]<! -->
+        <avg_growth_rate>0</avg_growth_rate> 
+        <std_growth_rate>0</std_growth_rate> 
+
+        <!-- Isoperimetric ratio = cellArea^3 / cellVolume^2 <! -->
+        <target_isoperimetric_ratio>216.0</target_isoperimetric_ratio> 
+
+        <angle_regularization_factor>0</angle_regularization_factor>
+
+        <!-- The elastic modulus of the cell membranes [M / (T^2 L^2)] <! -->
+        <area_elasticity_modulus>0</area_elasticity_modulus> 
+
+        <!-- The forces at which the links between the epithelial cells are broken  [M L / T^2] <! -->
+        <surface_coupling_max_curvature>1e-11</surface_coupling_max_curvature>
+
+
+        <!-- The volume the cell has to reach before division [L^3]<! -->
+        <avg_division_volume>0</avg_division_volume> 
+        <std_division_volume>0</std_division_volume> 
+
+        
+        <!-- If the cell reach this volume we delete it[L^3]<! -->
+        <min_vol>1e-18</min_vol> 
+
+
+        <!-- The cell might have different face types with different mechanical properties <! -->
+        <face_types>     
+            <face_type>           
+                <global_face_id>6</global_face_id>
+
+                <face_type_name>static_face</face_type_name>
+
+                <!-- Modulate the adherence between cells [(M / (T^2 L^2)] <! -->
+                <adherence_strength>0</adherence_strength>
+
+                <!-- Modulate the repulsion between cells [(M / (T^2 L^2)] <! -->
+                <repulsion_strength>1e9</repulsion_strength> 
+
+                <!-- The surface tension of the cell membranes [M / T^2] <! -->
+                <surface_tension>0.2e-10</surface_tension> 
+
+                <!-- The bending elasticity of the cell surface [M L / T^2] <! -->
+                <bending_modulus>0.0e-10</bending_modulus> 
+            </face_type>
+        </face_types>  
+    </cell_type>
+</cell_types>
+    

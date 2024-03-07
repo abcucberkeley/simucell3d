@@ -1,0 +1,16 @@
+{
+    "damping_coefficient": "kg/s",
+    "time_step": "s",
+    "contact_cutoff_adhesion": "m",
+    "contact_cutoff_repulsion": "m",
+    "bulk_modulus": "Pa", 
+    "adherence_strength": "Pa/m",
+    "repulsion_strength": "Pa/m",
+    "surface_tension": "N/m",
+    "bending_modulus": "J",
+    "ecm_bulk_modulus": "Pa", 
+    "ecm_adherence_strength": "Pa/m",
+    "ecm_repulsion_strength": "Pa/m",
+    "ecm_surface_tension": "N/m",
+    "ecm_bending_modulus": "J"
+}

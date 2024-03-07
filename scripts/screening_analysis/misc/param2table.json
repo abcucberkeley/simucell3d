@@ -1,0 +1,16 @@
+{
+    "damping_coefficient": "damping_coefficient",
+    "time_step": "time_step",
+    "contact_cutoff_adhesion": "contact_cutoff_adhesion",
+    "contact_cutoff_repulsion": "contact_cutoff_repulsion",
+    "bulk_modulus": "epi_bulk_modulus",
+    "adherence_strength": "epi_api_adherence_strength",
+    "repulsion_strength": "epi_api_repulsion_strength",
+    "surface_tension": "epi_api_surface_tension",
+    "bending_modulus": "epi_api_bending_modulus",
+    "ecm_bulk_modulus": "ecm_bulk_modulus",
+    "ecm_adherence_strength": "ecm_adherence_strength",
+    "ecm_repulsion_strength": "ecm_repulsion_strength",
+    "ecm_surface_tension": "ecm_surface_tension",
+    "ecm_bending_modulus": "ecm_bending_modulus"
+}
