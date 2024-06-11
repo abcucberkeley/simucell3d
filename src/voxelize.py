@@ -20,6 +20,7 @@ from tifffile import imwrite
 from pathlib import Path
 import os
 import shutil
+from line_profiler_pycharm import profile
 
 def round_to_nearest(value, base):
     value = np.asarray(value)
@@ -29,6 +30,7 @@ def round_to_nearest(value, base):
     value *= base
     return value
 
+@profile
 def voxelize_volume_with_bounds(mesh, density, check_surface=True):
     """Voxelize mesh to create a RectilinearGrid voxel volume.
 
@@ -64,7 +66,13 @@ def voxelize_volume_with_bounds(mesh, density, check_surface=True):
     """
 
     # check and pre-process input mesh
-    surface = mesh.extract_geometry()  # filter preserves topology
+    # unique_cell_ids = np.unique(mesh['face_cell_id'])
+
+
+    # need to use a plane to intersect the mesh, then extact those points and voxelize that.
+
+    surface = mesh.extract_geometry()
+    # surface = mesh.extract_points(mesh['face_cell_id'] == unique_cell_ids[0]).extract_geometry()  # filter preserves topology
     if not surface.faces.size:
         # we have a point cloud or an empty mesh
         raise ValueError('Input mesh must have faces for voxelization.')
@@ -92,7 +100,7 @@ def voxelize_volume_with_bounds(mesh, density, check_surface=True):
     voi = pv.RectilinearGrid(x, y, z)
 
     # get part of the mesh within the mesh's bounding surface.
-    selection = voi.select_enclosed_points(surface, tolerance=0.0, check_surface=check_surface)
+    selection = voi.select_enclosed_points(surface, tolerance=0.0, check_surface=False)  # takes the longest
     mask_vol = selection.point_data['SelectedPoints'].view(np.bool_)
 
     # Get voxels that fall within input mesh boundaries
@@ -104,7 +112,7 @@ def voxelize_volume_with_bounds(mesh, density, check_surface=True):
     voi_points_with_mesh = voi.extract_points(np.argwhere(mask_vol))
 
     cell_ids, idx = np.unique(voi_points_with_mesh["vtkOriginalCellIds"], return_index=True)
-    face_cell_ids = voi_points_with_mesh[idx]['face_cell_id']
+    # face_cell_ids = voi_points_with_mesh[idx]['face_cell_id']
 
     # Create new element of grid where all cells _within_ mesh boundary are
     # given new name 'MeshCells' and a discrete value of 1
@@ -114,17 +122,20 @@ def voxelize_volume_with_bounds(mesh, density, check_surface=True):
     return voi
 
 
-from line_profiler_pycharm import profile
 
+input_dir =  Path.cwd().joinpath(r"simulation_results/dynamic_simulation/face_data")
 
-directory = Path(r"/simulation_results/dynamic_simulation/face_data")
-output_dir = Path(os.path.join(directory.parent, "voxelized"))
+output_dir = Path(os.path.join(input_dir.parent, "voxelized"))
 shutil.rmtree(output_dir, ignore_errors=True)
 output_dir.mkdir(parents=True, exist_ok=True)
-for meshfile in os.listdir(directory):
-    if meshfile.endswith(".vtk"):
 
-        mesh = pv.read(directory / meshfile)
+
+meshfiles = sorted(Path(input_dir).iterdir(), key=os.path.getmtime, reverse=True)
+
+for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
+    if meshfile.suffix.endswith(".vtk"):
+
+        mesh = pv.read(meshfile)
         # print(mesh.array_names)
         mesh.set_active_scalars('face_cell_id')
         unique_cell_ids = np.unique(mesh['face_cell_id'])
@@ -141,7 +152,7 @@ for meshfile in os.listdir(directory):
         ###############################################################################
         # Create a voxel model of the bounding surface
 
-        density = 1e-6
+        density = 10e-6
 
         if density is None:
             density = mesh.length / 100
@@ -161,36 +172,39 @@ for meshfile in os.listdir(directory):
         # volume = np.zeros((len(x),len(y),len(z)), dtype=int)
         volume = np.zeros((256,256,256), dtype=int)
 
-        for i in tqdm(range(mesh.n_cells), desc=f"{meshfile}"):
-            points = mesh.get_cell(i).points
-            # points = mesh.extract_all_edges().cell_centers().points
-            for point in points:
-                cell_location = point
-                # cell_location = round_to_nearest(point, 1e-7)
-                # cell_location = round_to_nearest(mesh.get_cell(i).center, 1e-7)
-                cell_location = np.flip(cell_location, axis=0)  # z y x
+        if False:
 
-                volume_index = np.round((cell_location - np.array([z_min, y_min, x_min])) / density).astype(int)
-                volume_index = np.clip(volume_index, 0, np.array(volume.shape)-1)
+            for i in tqdm(range(mesh.n_cells), desc=f"{meshfile.stem}", unit=' mesh_cells', position=0):
+                points = mesh.get_cell(i).points
+                # points = mesh.extract_all_edges().cell_centers().points
+                for point in points:
+                    cell_location = point
+                    # cell_location = round_to_nearest(point, 1e-7)
+                    # cell_location = round_to_nearest(mesh.get_cell(i).center, 1e-7)
+                    cell_location = np.flip(cell_location, axis=0)  # z y x
 
-                face_id = mesh['face_cell_id'][i].astype(int)
-                volume[tuple(volume_index)] = face_id
+                    volume_index = np.round((cell_location - np.array([z_min, y_min, x_min])) / density).astype(int)
+                    volume_index = np.clip(volume_index, 0, np.array(volume.shape)-1)
 
-
-            # print(f"{volume_index}   id={face_id}")
-
-        imwrite(f'{output_dir}/{meshfile}.tif', volume)
-        print(f'Done. {volume.shape=}  shape={len(x), len(y), len(z)}, unique_cells={unique_cell_ids}')
+                    face_id = mesh['face_cell_id'][i].astype(int)
+                    volume[tuple(volume_index)] = face_id
 
 
+                # print(f"{volume_index}   id={face_id}")
 
-        # total_mesh = mesh.threshold([min(unique_cell_ids), max(unique_cell_ids)], scalars='face_cell_id')
-        # voxels = voxelize_volume_with_bounds(total_mesh, density=density)
-        # dimensions = np.array(voxels.dimensions) - 1
-        # dimensions = np.flip(dimensions, axis=0)
-        # imwrite(f'total.tif', voxels['InsideMesh'].reshape(dimensions))
-        # print(f'Done. {dimensions=}')
-        #
+            output_file = Path(f'{output_dir}/{meshfile.stem}.tif')
+            imwrite(output_file, volume)
+            # print(f'Done. {volume.shape=}  shape={len(x), len(y), len(z)}, unique_cells={unique_cell_ids}, output file={output_file}')
+
+
+
+        total_mesh = mesh.threshold([min(unique_cell_ids), max(unique_cell_ids)], scalars='face_cell_id')
+        voxels = voxelize_volume_with_bounds(total_mesh, density=density)
+        dimensions = np.array(voxels.dimensions) - 1
+        dimensions = np.flip(dimensions, axis=0)
+        imwrite(f'total.tif', voxels['InsideMesh'].reshape(dimensions))
+        print(f'Done. {dimensions=}')
+
         # for unique_cell_id in unique_cell_ids:
         #     single = mesh.threshold([unique_cell_id, unique_cell_id], scalars='face_cell_id')
         #     single_biocell = pv.voxelize_volume(single, density=density)
@@ -199,11 +213,12 @@ for meshfile in os.listdir(directory):
         #     single_cell = single_biocell['InsideMesh'].reshape(dimensions)
         #     imwrite(f'junk{unique_cell_id}.tif', single_cell)
         #     print(f'{unique_cell_id=} {dimensions=}')
-        #
-        #
-        #
-        # # print('Visualization.  Press "q" to quit and continue.')
-        # # p = pv.Plotter()
-        # # p.add_mesh(voxels, color=True, show_edges=False, opacity=0.5)
-        # # p.add_mesh(mesh, color="lightblue", opacity=0.5)
-        # # p.show(cpos=cpos)
+
+
+
+        # print('Visualization.  Press "q" to quit and continue.')
+        # p = pv.Plotter()
+        # p.add_mesh(voxels, color=True, show_edges=False, opacity=0.5)
+        # p.add_mesh(mesh, color="lightblue", opacity=0.5)
+        # p.show(cpos=cpos)
+        break
