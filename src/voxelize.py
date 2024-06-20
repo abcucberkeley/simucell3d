@@ -35,10 +35,15 @@ def round_to_nearest(value, base):
 
 input_dir =  Path.cwd().joinpath(r"simulation_results/dynamic_simulation/face_data")
 
-output_dir = Path(os.path.join(input_dir.parent, "voxelized"))
-shutil.rmtree(output_dir, ignore_errors=True)
-output_dir.mkdir(parents=True, exist_ok=True)
+output_dir_outlines = Path(os.path.join(input_dir.parent, "voxelized_outlines"))
+output_dir_labels = Path(os.path.join(input_dir.parent, "voxelized_labels"))
 
+shutil.rmtree(output_dir_outlines, ignore_errors=True)
+shutil.rmtree(output_dir_labels, ignore_errors=True)
+output_dir_outlines.mkdir(parents=True, exist_ok=True)
+output_dir_labels.mkdir(parents=True, exist_ok=True)
+
+print(f"Output files: {output_dir_outlines}  and  {output_dir_labels}")
 
 meshfiles = sorted(Path(input_dir).iterdir(), key=os.path.getmtime, reverse=True)
 
@@ -59,7 +64,8 @@ for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
         cpos = [CameraPosition, CameraFocalPoint, CameraViewUp]
         # mesh.plot(scalars='face_cell_id', cpos=cpos, opacity=0.99, specular=0.3)
 
-        volume = np.zeros((3, 128, 128), dtype=np.uint16)
+        volume_outlines = np.zeros((6, 128, 128), dtype=np.uint16)
+        volume_labels = np.zeros_like(volume_outlines)
 
 
         # mesh_coords = mesh.cell_centers().points
@@ -80,7 +86,7 @@ for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
         slice_normal = np.array([0, 0, 1])   # stupid (x,y,z)
         point_a = center + slice_normal * 1e-4
         point_b = center - slice_normal * 1e-4
-        z_slice_locations = pv.Line(point_a, point_b, resolution=volume.shape[0]-1)
+        z_slice_locations = pv.Line(point_a, point_b, resolution=volume_outlines.shape[0]-1)
 
         # p = pvqt.BackgroundPlotter()
         # pv.global_theme.allow_empty_mesh = True
@@ -99,7 +105,9 @@ for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
 
             unique_cell_ids = np.unique(slice[name]).astype(int)
             dpi = 1000
-            fig, ax = plt.subplots(figsize=(volume.shape[2]/dpi, volume.shape[1]/dpi), dpi=dpi)
+            fig_outlines, ax_outlines = plt.subplots(figsize=(volume_outlines.shape[2]/dpi, volume_outlines.shape[1]/dpi), dpi=dpi)
+            fig_labels, ax_labels = plt.subplots(figsize=(volume_outlines.shape[2]/dpi, volume_outlines.shape[1]/dpi), dpi=dpi)
+
             for color_idx, unique_cell_id in enumerate(unique_cell_ids):
                 single_outline = slice.threshold([unique_cell_id, unique_cell_id], scalars=name).extract_surface()
                 single_verts = mesh.threshold([unique_cell_id, unique_cell_id], scalars=name).extract_surface().clip_closed_surface(normal=slice_normal, origin=line_point).clip(normal=-1 * slice_normal, origin=line_point)
@@ -124,39 +132,59 @@ for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
 
                 segments = np.array([x, y]).transpose()
 
-                # Create a LineCollection object
                 Blue = unique_cell_id & 255
                 Green = (unique_cell_id >> 8) & 255
                 Red = (unique_cell_id >> 16) & 255
-
                 color = (Red / 255, Green / 255, Blue / 255)
+
+                # Create a LineCollection object
                 lc = collections.LineCollection(segments, colors=color, antialiased=False, linewidths=.1, facecolors=color)
-                # ax.add_collection(lc)
+                ax_outlines.add_collection(lc)
 
-
+                # Create a PolyCollection object (a list of patches)
                 pc = collections.PolyCollection(patches, facecolors=color, antialiased=False, closed=True)
-                ax.add_collection(pc)
+                ax_labels.add_collection(pc)
 
 
-            ax.set_xlim([mesh.bounds[0], mesh.bounds[1]])
-            ax.set_ylim([mesh.bounds[2], mesh.bounds[3]])
-            ax.axis('off')
-            # plt.show()
+            ax_outlines.set_xlim([mesh.bounds[0], mesh.bounds[1]])
+            ax_outlines.set_ylim([mesh.bounds[2], mesh.bounds[3]])
+            ax_outlines.axis('off')
 
-            fig.canvas.draw()
+            fig_outlines.canvas.draw()
 
             # Convert the canvas to a raw RGB buffer, next go back to the u16 we wanted.
-            buf = fig.canvas.renderer.buffer_rgba()
-            ncols, nrows = fig.canvas.get_width_height()
+            buf = fig_outlines.canvas.renderer.buffer_rgba()
+            ncols, nrows = fig_outlines.canvas.get_width_height()
             image = np.frombuffer(buf, dtype=np.uint8).reshape(nrows, ncols, 4).astype(int)
             r = image[:, :, 0]
             g = image[:, :, 1]
             b = image[:, :, 2]
 
-            plt.close()
+            slab = r * 256**2 + g * 256 + b     # convert RGB back to face_cell_id
+            volume_outlines[z_slice_idx, :, :] = slab.astype(np.uint16)    # assign to the slice in the volume
+
+
+
+            ax_labels.set_xlim([mesh.bounds[0], mesh.bounds[1]])
+            ax_labels.set_ylim([mesh.bounds[2], mesh.bounds[3]])
+            ax_labels.axis('off')
+
+            fig_labels.canvas.draw()
+
+            # Convert the canvas to a raw RGB buffer, next go back to the u16 we wanted.
+            buf = fig_labels.canvas.renderer.buffer_rgba()
+            ncols, nrows = fig_labels.canvas.get_width_height()
+            image = np.frombuffer(buf, dtype=np.uint8).reshape(nrows, ncols, 4).astype(int)
+            r = image[:, :, 0]
+            g = image[:, :, 1]
+            b = image[:, :, 2]
 
             slab = r * 256**2 + g * 256 + b     # convert RGB back to face_cell_id
+            volume_labels[z_slice_idx, :, :] = slab.astype(np.uint16)    # assign to the slice in the volume
 
-            volume[z_slice_idx, :, :] = slab    # assign to the slice in the volume
-    output_file = Path(f'{output_dir}/{meshfile.stem}.tif')
-    imwrite(output_file, volume.astype(np.uint16))
+            plt.close()
+
+    output_file_outlines = Path(f'{output_dir_outlines}/{meshfile.stem}_outlines.tif')
+    imwrite(output_file_outlines, volume_outlines.astype(np.uint16), dtype=np.uint16)
+    output_file_labels = Path(f'{output_dir_labels}/{meshfile.stem}_labels.tif')
+    imwrite(output_file_labels, volume_labels.astype(np.uint16), dtype=np.uint16)
