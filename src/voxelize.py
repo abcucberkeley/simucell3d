@@ -203,37 +203,15 @@ for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
         # print(mesh.array_names)
         mesh.set_active_scalars('face_cell_id')
         surf = mesh.extract_surface()
-        ###############################################################################
+
+
         CameraPosition = (-0.00028617924571107807, 1.2141999718551233e-05, 1.2238500858074985e-05)
         CameraFocalPoint = (1.2123850410716841e-05, 1.2141999718551233e-05, 1.2238500858074985e-05)
         CameraViewUp = (0.0, 0.0, 1.0)
-
         cpos = [CameraPosition, CameraFocalPoint, CameraViewUp]
         # mesh.plot(scalars='face_cell_id', cpos=cpos, opacity=0.99, specular=0.3)
 
-
-        ###############################################################################
-        # Create a voxel model of the bounding surface
-
-        density = 100e-6
-
-        if density is None:
-            density = mesh.length / 100
-        if isinstance(density, (int, float, np.number)):
-            density_x, density_y, density_z = [density] * 3
-        elif isinstance(density, np.ndarray):
-            density_x, density_y, density_z = density
-        else:
-            raise TypeError(f'Invalid density {density!r}, expected number or array-like.')
-
-
-        x_min, x_max, y_min, y_max, z_min, z_max = mesh.bounds
-        x = np.arange(x_min, x_max, density_x)
-        y = np.arange(y_min, y_max, density_y)
-        z = np.arange(z_min, z_max, density_z)
-
-        # volume = np.zeros((len(x),len(y),len(z)), dtype=int)
-        volume = np.zeros((64,1024,1024), dtype=float)
+        volume = np.zeros((64,1024,1024), dtype=np.uint16)
 
 
         # mesh_coords = mesh.cell_centers().points
@@ -291,7 +269,6 @@ for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
 
 
                     # Create a LineCollection object
-                    # lc = collections.LineCollection(segments, colors=cm.colors[color_idx % len(cm.colors)])
                     Blue = unique_cell_id & 255
                     Green = (unique_cell_id >> 8) & 255
                     Red = (unique_cell_id >> 16) & 255
@@ -307,78 +284,17 @@ for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
 
                 fig.canvas.draw()
 
-                # Convert the canvas to a raw RGB buffer
-                buf = fig.canvas.tostring_rgb()
+                # Convert the canvas to a raw RGB buffer then back to the u16 we
+                buf = fig.canvas.renderer.buffer_rgba()
                 ncols, nrows = fig.canvas.get_width_height()
-                image = np.frombuffer(buf, dtype=np.uint8).reshape(nrows, ncols, 3).astype(int)
+                image = np.frombuffer(buf, dtype=np.uint8).reshape(nrows, ncols, 4).astype(int)
                 r = image[:, :, 0]
                 g = image[:, :, 1]
                 b = image[:, :, 2]
 
-                slab = r * 256**2 + g * 256 + b
+                slab = r * 256**2 + g * 256 + b     # convert RGB back to face_cell_id
 
-                # imwrite(f'junk{unique_cell_id}.tif', single_cell)
-                # print(f'{unique_cell_ids=}')
-
-
-
-                # my_array = slice_to_array(slice, normal=slice_normal, origin=line_point, name=name, ni=volume.shape[1], nj=volume.shape[2])
-                # volume[idx, :, :] = my_array
-                if False:
-                    for i in tqdm(range(mesh.n_cells), desc=f"{meshfile.stem}", unit=' mesh_cells', position=0):
-                        points = mesh.get_cell(i).points
-                        # points = mesh.extract_all_edges().cell_centers().points
-                        for point in points:
-                            cell_location = point
-                            # cell_location = round_to_nearest(point, 1e-7)
-                            # cell_location = round_to_nearest(mesh.get_cell(i).center, 1e-7)
-                            cell_location = np.flip(cell_location, axis=0)  # z y x
-
-                            volume_index = np.round((cell_location - np.array([z_min, y_min, x_min])) / density).astype(int)
-                            volume_index = np.clip(volume_index, 0, np.array(volume.shape)-1)
-
-                            face_id = mesh['face_cell_id'][i].astype(int)
-                            volume[tuple(volume_index)] = face_id
-
-
-                        # print(f"{volume_index}   id={face_id}")
-
-                volume[idx, :, :] = slab
+                volume[idx, :, :] = slab    # assign to the slice in the volume
                 output_file = Path(f'{output_dir}/{meshfile.stem}.tif')
-                imwrite(output_file, volume.astype(np.float32))
+                imwrite(output_file, volume.astype(np.uint16))
                 plt.close()
-            # print(f'Done. {volume.shape=}  shape={len(x), len(y), len(z)}, unique_cells={unique_cell_ids}, output file={output_file}')
-
-
-
-
-        if False:
-            unique_cell_ids = np.unique(mesh['face_cell_id'])
-            total_mesh = mesh.threshold([min(unique_cell_ids), max(unique_cell_ids)], scalars='face_cell_id')
-            p.add_mesh(total_mesh, scalars='face_cell_id')
-            print(f'Voxelizing....')
-            voxels = voxelize_volume_with_bounds(total_mesh, density=density)
-            dimensions = np.array(voxels.dimensions) - 1
-            dimensions = np.flip(dimensions, axis=0)
-            output_file = Path(f'{output_dir}/{meshfile.stem}.tif')
-            imwrite(output_file, voxels['InsideMesh'].reshape(dimensions))
-            print(f'Done. {dimensions=}')
-
-            for unique_cell_id in unique_cell_ids:
-                single = mesh.threshold([unique_cell_id, unique_cell_id], scalars='face_cell_id')
-                single_biocell = pv.voxelize_volume(single, density=density)
-                dimensions = np.array(single_biocell.dimensions) - 1
-                dimensions = np.flip(dimensions, axis=0)
-                single_cell = single_biocell['InsideMesh'].reshape(dimensions)
-                imwrite(f'junk{unique_cell_id}.tif', single_cell)
-                print(f'{unique_cell_id=} {dimensions=}')
-
-
-
-            # print('Visualization.  Press "q" to quit and continue.')
-            # p = pv.Plotter()
-            # p.add_mesh(voxels, color=True, show_edges=False, opacity=0.5)
-            # p.add_mesh(mesh, color="lightblue", opacity=0.5)
-            # p.show(cpos=cpos)
-
-        # p.close()
