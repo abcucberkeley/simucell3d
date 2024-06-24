@@ -44,11 +44,36 @@ jobs:
           rm -rf ./.??* || true
           ls -la ./
 
-  build-docker:
+  free-disk-space:
     needs: cleanup-job
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Free Disk Space (Ubuntu)
+      uses: jlumbroso/free-disk-space@main
+      with:
+        # this might remove tools that are actually needed,
+        # if set to "true" but frees about 6 GB
+        tool-cache: false
+
+        # all of these default to true, but feel free to set to
+        # "false" if necessary for your workflow
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
+
+
+  build-docker:
+    needs: free-disk-space
     if: always()
     name: docker_image_build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Dump GitHub context
         env:
