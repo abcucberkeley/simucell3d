@@ -159,6 +159,8 @@ jobs:
   build-apptainer:
     needs: build-docker
     runs-on: ubuntu-latest
+    container:
+      image: kaczmarj/apptainer:latest
     steps:
       - name: List files in the directory
         run: |
