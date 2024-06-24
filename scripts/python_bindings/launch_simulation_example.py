@@ -1,5 +1,6 @@
 import sys
 from os import path
+from pathlib import Path
 import pandas as pd
 from io import StringIO
 
@@ -10,12 +11,14 @@ This python script lauches a simucell3d simulation and retrieves the cell statis
 
 #--------------------------------------------------------------------------------------------------------
 #Get the path to the directory where this script is stored 
-path_to_script_folder = path.dirname(path.realpath(__file__))
+path_to_script_folder = path.join(path.dirname(path.realpath(__file__)), "..")
 
 #Get the path to the simucell3d python library
 path_to_build = path.realpath(path.join(path_to_script_folder, "..", "..", "build"))
-if not path.exists(path_to_build): 
-    raise SystemError("\n\nThe given path to the build folder: {} does not exist.\n".format(path_to_build))
+if not path.exists(path_to_build):
+    path_to_build = Path("/app/container_build")
+    if not path.exists(path_to_build):
+        raise SystemError("\n\nThe given path to the build folder: {} does not exist.\n".format(path_to_build))
 
 #Get the path to the simucell3d python library
 path_to_simucell3d_python_library = path.join(path_to_build, "bin", "python_bindings")
@@ -128,9 +131,10 @@ if __name__ == "__main__":
 
     #--------------------------------------------------------------------------------------------------------
     #Create a global_simulation_parameters object to store the simulation parameters
+    input_meshes_folder = path.realpath(path.join(path_to_script_folder, "..", "data", "input_meshes"))
     global_simulation_parameters = simucell3d_python_wrapper.global_simulation_parameters()
-    global_simulation_parameters.output_folder_path_ =      path.join(path_to_build, "python_sim_example")
-    global_simulation_parameters.input_mesh_path_ =         "data/input_meshes/big_sphere.vtk"
+    global_simulation_parameters.output_folder_path_ =      path.join(path_to_script_folder, "..", "simulation_results", "python_sim_example")
+    global_simulation_parameters.input_mesh_path_ =         path.join(input_meshes_folder, "big_sphere.vtk")
     global_simulation_parameters.damping_coefficient_ =     2e-9
     global_simulation_parameters.simulation_duration_ =     1e-3 
     global_simulation_parameters.sampling_period_ =         1e-5 
