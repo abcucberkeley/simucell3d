@@ -117,8 +117,7 @@ jobs:
             org.opencontainers.image.title=Simucell3D
             org.opencontainers.image.description=Docker image for Simucell3D
             org.opencontainers.image.vendor=Advanced Bioimaging Center at UC Berkeley and Janelia Research Campus
-          tags: |
-            type=schedule
+
 
       - name: Build and push Docker image
         id: build-and-push
