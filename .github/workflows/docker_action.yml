@@ -161,6 +161,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: kaczmarj/apptainer:latest
+      options: --privileged
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: List files in the directory
         run: |
