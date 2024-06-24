@@ -44,6 +44,7 @@ COPY test test
 COPY include include
 COPY CMakeLists.txt .
 COPY main.cpp .
+COPY scripts scripts
 
 # Set working directory to the build directory
 WORKDIR /app/container_build
@@ -56,8 +57,7 @@ RUN make -j4
 
 # Add python packages
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir --progress-bar off numpy matplotlib pyvista tqdm ipython tifffile line_profiler_pycharm pytest &&  pip cache purge || true
-
+RUN pip install --no-cache-dir --progress-bar off pyvista tqdm ipython line_profiler_pycharm pytest -r /app/scripts/python_bindings/requirements.txt &&  pip cache purge || true
 
 ARG USERNAME=vscode
 ENV USER=${USERNAME}
