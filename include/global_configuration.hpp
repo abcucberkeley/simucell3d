@@ -13,7 +13,7 @@
 
 
 //Write the normals of the cell surfaces at the level of the faces and vertices. This adds a lot more data to the mesh files
-#define WRITE_NORMALS_IN_OUTPUT_MESH_FILE true
+#define WRITE_NORMALS_IN_OUTPUT_MESH_FILE false
 
 
 //The faces can be polarize by different techniques. The following index can be used to choose the polarization mode:
