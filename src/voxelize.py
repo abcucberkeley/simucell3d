@@ -36,6 +36,10 @@ import os
 import shutil
 from line_profiler_pycharm import profile
 
+from timeit import default_timer as timer
+from datetime import timedelta
+
+
 def round_to_nearest(value, base):
     value = np.asarray(value)
 
@@ -242,4 +246,9 @@ def main(shape: tuple = (256, 1024, 1024),
         imwrite(output_file_labels, volume_labels.astype(np.uint16), compression='deflate', dtype=np.uint16)
 
 if __name__ == '__main__':
+    start = timer()
+
     main()
+
+    end = timer()
+    print(timedelta(seconds=end - start))

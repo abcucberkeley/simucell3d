@@ -1,15 +1,14 @@
 import numpy as np
 import pyvista as pv
-import matplotlib.pyplot as plt
-import matplotlib.collections as collections
 
 from tqdm import tqdm
-from tifffile import imwrite
 from pathlib import Path
-import os
-import shutil
 from line_profiler_pycharm import profile
 from scipy.spatial import distance_matrix
+from vtkmodules.vtkIOLegacy import vtkUnstructuredGridWriter
+
+from timeit import default_timer as timer
+from datetime import timedelta
 
 def round_to_nearest(value, base):
     value = np.asarray(value)
@@ -20,15 +19,15 @@ def round_to_nearest(value, base):
     return value
 
 @profile
-def uniform_mesh(n,
-         input_mesh_path: Path = None,
-         extent: float = 51e-6,  # boundary distance from zero in meters
-         ):
-    input = pv.read(input_mesh_path)
-    input.translate(np.array(input.center) * -1, inplace=True)
-    print(f'{input.array_names}')
+def uniform_mesh(
+        input_mesh_path: Path = None,
+        extent: float = 51e-6,  # boundary distance from zero in meters
+        ):
+    mesh = pv.read(input_mesh_path)
+    mesh.translate(np.array(mesh.center) * -1, inplace=True)
+    print(f'{mesh.array_names}')
 
-    bounds = input.bounds
+    bounds = mesh.bounds
     size = (bounds[0]-bounds[1],
             bounds[2]-bounds[3],
             bounds[4]-bounds[5])
@@ -51,24 +50,34 @@ def uniform_mesh(n,
             grid = np.vstack((grid, nucleation_point))
     print(f"  found {grid.shape[0]} points that don't intersect")
 
-    mesh = input
     total = pv.MultiBlock()
     for i, position in tqdm(enumerate(grid), unit=' cells', desc='Creating meshes at each nucleation point', total=grid.shape[0]):
-        if total is None:
-            total = mesh.copy(deep=True)
-        else:
-            next = mesh.translate(position, inplace=False, transform_all_input_vectors=False)
-            next['Cell_id'] = next['Cell_id'] + i
-            total.append(next)
+        next_mesh = mesh.translate(position, inplace=False, transform_all_input_vectors=True)
+        next_mesh['Cell_id'] = next_mesh['Cell_id'] + i
+        total.append(next_mesh)
     total = total.combine()
-    print(f"Final grid:\n {total}")
-    print(f"Cell_id's: {total['Cell_id'][:20]}...")
-
+    print(f"Final grid:\n {total}, {total.n_cells=}, {total.number_of_cells=}")
 
     output_file = Path(f"{input_mesh_path.with_suffix('')}_meshed.vtk")
     print(f"Saving...")
-    total.save(output_file, binary=False)
+    writer = vtkUnstructuredGridWriter()
+    writer.SetFileVersion(42)
+    writer.SetFileName(output_file)
+    writer.SetInputData(total)
+    writer.SetFileTypeToASCII()  # needs this for Simucell3d to load it
+    writer.Write()
+    # input.save(output_file, binary=False)  # Garbage.  Won't get read by
     print(f"Saved: {output_file.resolve()}")
 
+    ## Check if file was written properly
+    # total = pv.read(output_file)
+    # print(f"Saved grid:\n {total}, {total.n_cells=}, {total.number_of_cells=}")
+
+
 if __name__ == '__main__':
-    uniform_mesh(100, Path("../data/input_meshes/sphere.vtk"))
+    start = timer()
+
+    uniform_mesh(Path("../data/input_meshes/sphere.vtk"))
+
+    end = timer()
+    print(timedelta(seconds=end - start))

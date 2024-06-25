@@ -9,3 +9,5 @@ simulation_results/
 data.zip
 voxelize.py.pclprof
 /from_paper
+src/input_mesh_generation.py.pclprof
+*.pclprof

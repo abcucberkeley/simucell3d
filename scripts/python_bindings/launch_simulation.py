@@ -4,6 +4,10 @@ from pathlib import Path
 import pandas as pd
 from io import StringIO
 
+from timeit import default_timer as timer
+from datetime import timedelta
+
+
 """
 This python script lauches a simucell3d simulation and retrieves the cell statistics data.
 """
@@ -128,15 +132,16 @@ def launch_simulation(
 #--------------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
 
+    start = timer()
 
     #--------------------------------------------------------------------------------------------------------
     #Create a global_simulation_parameters object to store the simulation parameters
     input_meshes_folder = path.realpath(path.join(path_to_script_folder, "..", "data", "input_meshes"))
     global_simulation_parameters = simucell3d_python_wrapper.global_simulation_parameters()
     global_simulation_parameters.output_folder_path_ =      path.join(path_to_script_folder, "..", "simulation_results", "python_sim_example")
-    global_simulation_parameters.input_mesh_path_ =         path.join(input_meshes_folder, "big_sphere.vtk")
+    global_simulation_parameters.input_mesh_path_ =         path.join(input_meshes_folder, "sphere_meshed.vtk")  # big_sphere
     global_simulation_parameters.damping_coefficient_ =     2e-9
-    global_simulation_parameters.simulation_duration_ =     1e-3 
+    global_simulation_parameters.simulation_duration_ =     1e-4
     global_simulation_parameters.sampling_period_ =         1e-5 
     global_simulation_parameters.time_step_ =               1e-07
     global_simulation_parameters.min_edge_len_ =            1e-6
@@ -211,3 +216,5 @@ if __name__ == "__main__":
         print(simulation_outputs.error_message_)
 
 
+    end = timer()
+    print(timedelta(seconds=end - start))
