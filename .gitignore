@@ -11,3 +11,5 @@ voxelize.py.pclprof
 /from_paper
 src/input_mesh_generation.py.pclprof
 *.pclprof
+data/input_meshes/sphere_meshed.vtk
+*.pclprof

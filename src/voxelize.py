@@ -50,9 +50,9 @@ def round_to_nearest(value, base):
 
 
 @profile
-def main(shape: tuple = (256, 1024, 1024),
-         input_dir: Path = Path.cwd().joinpath(r"simulation_results/dynamic_simulation/face_data"),
-         extent: float = 1e-4,  # Z boundary distance from zero in meters
+def main(shape: tuple = (256, 256, 256),
+         input_dir: Path = Path.cwd().joinpath(r"simulation_results/python_sim_example/face_data"),
+         extent: float = 51e-6,  # Z boundary distance from zero in meters
          ):
 
     volume_outlines = np.zeros(shape=shape, dtype=np.uint16)
