@@ -202,7 +202,7 @@ if __name__ == "__main__":
         cell_statistics_data_df = get_cell_statistics_data(simulation_outputs)
 
         #Save the cell statistics data
-        cell_statistics_data_df.to_csv(path.join(path_to_build, "python_sim_example", "cell_statistics_data.csv"), header = True, index = False)
+        cell_statistics_data_df.to_csv(path.join(global_simulation_parameters.output_folder_path_, "..", "simulation_results_cell_statistics_data.csv"), header = True, index = False)
 
         print(cell_statistics_data_df)
     

@@ -4,6 +4,8 @@ import numpy as np
 from os import path, _exit
 import re
 
+from vtkmodules.vtkCommonDataModel import vtkPolyData
+
 """
     In some meshes, each face is defined as a vtkCell. This is the case by default in stl, ply and obj meshes. 
     This script regroups all the faces belonging to the same cell and form one single vtkCell from them.
@@ -13,7 +15,7 @@ import re
 
 
 
-def get_polydata_from_file(filename):
+def get_polydata_from_file(filename) -> vtkPolyData:
     """
     Read a mesh file and return a vtkPolyData object
 
@@ -163,7 +165,7 @@ def separate_cell_points_and_faces(polydata, face_cell_id, point_cell_id):
 
 
 
-def write_unstructured_grid(polydata, face_dic, point_dic, output_file_path):
+def write_unstructured_grid(polydata: vtkPolyData, face_dic, point_dic, output_file_path):
     """
     This method directly writes a file at the legacy unstructured grid vtk format. 
 
@@ -197,7 +199,9 @@ def write_unstructured_grid(polydata, face_dic, point_dic, output_file_path):
 
     #Loop over the points of the polydata
     vtk_points = polydata.GetPoints()
-    
+    arrays = polydata.GetFieldData().GetAbstractArray("CellId")
+
+    print(f"Datatype = {type(polydata)}.  Number of points read = {vtk_points.GetNumberOfPoints()}")
     #Convert the point coordinates to a list
     point_lst = [list(vtk_points.GetPoint(i)) for i in range(vtk_points.GetNumberOfPoints())]
 

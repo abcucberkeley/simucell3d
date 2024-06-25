@@ -75,6 +75,17 @@ def main(shape: tuple = (256, 1024, 1024),
             print(f"Reading {meshfile}")
             mesh = pv.read(meshfile)
 
+            # meshsize = np.array([mesh.bounds[0]-mesh.bounds[1],
+            #                      mesh.bounds[2]-mesh.bounds[3],
+            #                      mesh.bounds[4]-mesh.bounds[5]])
+            #
+            # bounds_okay = all(np.abs(meshsize) > 1e-4)
+            # print(f"Bounds ok: {bounds_okay}  {meshfile.name}")
+            # if bounds_okay:
+            #     continue
+            # else:
+            #     break
+
             if bounds is None:
                 bounds = mesh.bounds
 
