@@ -44,7 +44,6 @@ def round_to_nearest(value, base):
     value *= base
     return value
 
-pv.report()
 
 @profile
 def main(shape: tuple = (256, 1024, 1024),
@@ -66,7 +65,7 @@ def main(shape: tuple = (256, 1024, 1024),
     print(f"Output files: {output_dir_outlines}  and  {output_dir_labels}")
 
     meshfiles = sorted(Path(input_dir).iterdir(), key=os.path.getmtime, reverse=True)
-    meshfiles = meshfiles[:4]
+    # meshfiles = meshfiles[1401::100]
 
     bounds = None
 
