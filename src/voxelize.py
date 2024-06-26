@@ -28,8 +28,15 @@ os.environ['NUMEXPR_MAX_THREADS'] = '24'
 
 import numpy as np
 import pyvista as pv
+# import matplotlib
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.collections as collections
+# import matplotlib.style as mplstyle
+# mplstyle.use('fast')
+# print(matplotlib.pyplot.get_backend())
+
+
 
 from tqdm import tqdm
 from tifffile import imwrite
@@ -41,7 +48,7 @@ from timeit import default_timer as timer
 from datetime import timedelta
 
 import logging
-
+# add custom formatter to root logger
 class DeltaTimeFormatter(logging.Formatter):
     def format(self, record):
         duration = datetime.datetime.utcfromtimestamp(record.relativeCreated / 1000)
@@ -151,9 +158,10 @@ def voxelize_volume_with_bounds(mesh, bounds, shape, check_surface=True):
     return voi
 
 @profile
-def main(shape: tuple = (256, 256, 256),
+def main(shape: tuple = (255, 256, 256),
          input_dir: Path = Path.cwd().joinpath(r"simulation_results/python_sim_example/face_data"),
-         extent: float = 51e-6,  # Z boundary distance from zero in meters
+         extent: float = 51e-6,  # Z boundary distance from zero in meters,
+         bounds: tuple = None,
          ):
 
     volume_outlines = np.zeros(shape=shape, dtype=np.uint16)
@@ -162,10 +170,6 @@ def main(shape: tuple = (256, 256, 256),
     output_dir_outlines = Path(os.path.join(input_dir.parent, "voxelized_outlines"))
     output_dir_labels = Path(os.path.join(input_dir.parent, "voxelized_labels"))
 
-    shutil.rmtree(output_dir_outlines, ignore_errors=True)
-    shutil.rmtree(output_dir_labels, ignore_errors=True)
-    output_dir_outlines.mkdir(parents=True, exist_ok=True)
-    output_dir_labels.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"Output files: {output_dir_outlines}  and  {output_dir_labels}")
 
@@ -173,7 +177,12 @@ def main(shape: tuple = (256, 256, 256),
     meshfiles = [meshfiles[0]]
     # meshfiles = meshfiles[1401::100]
 
-    bounds = None
+    if len(meshfiles) > 1:
+        shutil.rmtree(output_dir_outlines, ignore_errors=True)
+        shutil.rmtree(output_dir_labels, ignore_errors=True)
+    output_dir_outlines.mkdir(parents=True, exist_ok=True)
+    output_dir_labels.mkdir(parents=True, exist_ok=True)
+
 
     for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
         if meshfile.suffix.endswith(".vtk"):
@@ -181,24 +190,18 @@ def main(shape: tuple = (256, 256, 256),
             logger.info(f" Reading {meshfile}")
             mesh = pv.read(meshfile)
 
-            # meshsize = np.array([mesh.bounds[0]-mesh.bounds[1],
-            #                      mesh.bounds[2]-mesh.bounds[3],
-            #                      mesh.bounds[4]-mesh.bounds[5]])
-            #
-            # bounds_okay = all(np.abs(meshsize) > 1e-4)
-            # logger.info(f"Bounds ok: {bounds_okay}  {meshfile.name}")
-            # if bounds_okay:
-            #     continue
-            # else:
-            #     break
+            # Reduce scalar data
+            mesh.cell_data['face_cell_id'] = mesh.cell_data['face_cell_id'].astype(int)
+            del mesh.cell_data['face_area']
+            del mesh.cell_data['face_type_id']
+            del mesh.cell_data['face_surface_tension']
 
             if bounds is None:
                 bounds = mesh.bounds
-
-            logger.info(mesh.array_names)
+            mesh.translate(-1 * np.array(mesh.center), inplace=True)
+            print(f"   Bounds: {bounds} \nMeshbounds: {round_to_nearest(mesh.bounds, 1e-7)}")
             mesh.set_active_scalars('face_cell_id')
             surf = mesh.extract_surface()
-
 
             CameraPosition = (-0.00028617924571107807, 1.2141999718551233e-05, 1.2238500858074985e-05)
             CameraFocalPoint = (1.212385041071684e-05, 1.2141999718551233e-05, 1.2238500858074985e-05)
@@ -210,7 +213,7 @@ def main(shape: tuple = (256, 256, 256),
             slice_normal = np.array([0, 0, 1])   # stupid (x,y,z)
             point_a = center + slice_normal * extent
             point_b = center - slice_normal * extent
-            z_slice_locations = pv.Line(point_a, point_b, resolution=volume_outlines.shape[0]-1)
+            z_slice_locations = np.linspace(point_a, point_b, volume_outlines.shape[0])
 
             # p = pvqt.BackgroundPlotter()
             # pv.global_theme.allow_empty_mesh = True
@@ -228,8 +231,7 @@ def main(shape: tuple = (256, 256, 256),
             if pyvoxelize:
                 voxelize_volume_with_bounds(mesh, bounds, shape=shape, check_surface=False)
             else:
-
-                for z_slice_idx, line_point in enumerate(z_slice_locations.points):
+                for z_slice_idx, line_point in enumerate(z_slice_locations):
                     slice = surf.slice(normal=slice_normal, origin=line_point)
                     unique_cell_ids = np.unique(slice[name]).astype(int)
 
@@ -278,7 +280,7 @@ def main(shape: tuple = (256, 256, 256),
                     ax_outlines.set_xlim([bounds[0], bounds[1]])
                     ax_outlines.set_ylim([bounds[2], bounds[3]])
                     ax_outlines.axis('off')
-
+                    plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
                     fig_outlines.canvas.draw()
 
                     # Convert the canvas to a raw RGB buffer, next go back to the u16 we wanted.
@@ -292,12 +294,10 @@ def main(shape: tuple = (256, 256, 256),
                     slab = r * 256**2 + g * 256 + b     # convert RGB back to face_cell_id
                     volume_outlines[z_slice_idx, :, :] = slab.astype(np.uint16)    # assign to the slice in the volume
 
-
-
                     ax_labels.set_xlim([bounds[0], bounds[1]])
                     ax_labels.set_ylim([bounds[2], bounds[3]])
                     ax_labels.axis('off')
-
+                    plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
                     fig_labels.canvas.draw()
 
                     # Convert the canvas to a raw RGB buffer, next go back to the u16 we wanted.
@@ -355,11 +355,15 @@ def convert_lines_to_polycollection(x_starts: np.ndarray,
 
 
 if __name__ == '__main__':
-    # add custom formatter to root logger
+
+    z_size, y_size, x_size = 51200e-9, 25600e-9, 25600e-9
 
     start = timer()
     logger.info('starting...')
-    main()
+    bounds = (-x_size/2, x_size/2,
+              -y_size/2, y_size/2,
+              -z_size/2, z_size/2)
+    main(bounds=bounds)
     logger.info('finished...')
     end = timer()
-    print(f"Finished.  Elapsed: {end - start} seconds.  {timedelta(seconds=end - start)}")
+    print(f"Finished.  Elapsed: {round_to_nearest(end - start,1)} seconds.  {timedelta(seconds=round_to_nearest(end - start,1))}")
