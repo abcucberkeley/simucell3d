@@ -13,3 +13,4 @@ src/input_mesh_generation.py.pclprof
 *.py.pclprof
 *.pclprof
 data/input_meshes/sphere_meshed.vtk
+src/input_mesh_generation.py.pclprof

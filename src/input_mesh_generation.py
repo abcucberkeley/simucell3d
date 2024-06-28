@@ -60,7 +60,7 @@ def uniform_mesh(
         next_mesh['Cell_id'] = next_mesh['Cell_id'] + i + 1   # start Cell_id at 1, so that zero can be in a lablelled image for "empty"
         total.append(next_mesh)
     total = total.combine()
-    print(f"Final grid:\n {total}, {total.n_cells=}, {total.number_of_cells=}, total.bounds={round_to_nearest(total.bounds,1e-7)}")
+    print(f"Final grid:\n {total}\n  \n{total.n_cells=}, {total.number_of_cells=}, total.bounds={round_to_nearest(total.bounds,1e-7)}\n")
 
     output_file = Path(f"{input_mesh_path.with_suffix('')}_meshed.vtk")
     print(f"Saving...")
@@ -84,4 +84,4 @@ if __name__ == '__main__':
     uniform_mesh(Path("../data/input_meshes/sphere.vtk"))
 
     end = timer()
-    print(timedelta(seconds=end - start))
+    print(f"Finished.  Elapsed: {int(end - start)} seconds.  {timedelta(seconds=int(end - start))}")

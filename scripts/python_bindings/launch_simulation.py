@@ -194,7 +194,7 @@ if __name__ == "__main__":
     #--------------------------------------------------------------------------------------------------------
 
 
-    #Launch the simulation
+    # Launch the simulation
     simulation_outputs = launch_simulation(
         global_simulation_parameters, 
         cell_type_lst,
@@ -203,10 +203,10 @@ if __name__ == "__main__":
     )
 
     if simulation_outputs.RETURN_CODE_ == 0:
-        #Get the cell statistics data
+        # Get the cell statistics data
         cell_statistics_data_df = get_cell_statistics_data(simulation_outputs)
 
-        #Save the cell statistics data
+        # Save the cell statistics data
         cell_statistics_data_df.to_csv(path.join(global_simulation_parameters.output_folder_path_, "..", "simulation_results_cell_statistics_data.csv"), header = True, index = False)
 
         print(cell_statistics_data_df)
@@ -215,6 +215,6 @@ if __name__ == "__main__":
         print("The simulation did not terminate")
         print(simulation_outputs.error_message_)
 
-
     end = timer()
-    print(timedelta(seconds=end - start))
+    print(f"Finished.  Elapsed: {int(end - start)} seconds.  {timedelta(seconds=int(end - start))}")
+

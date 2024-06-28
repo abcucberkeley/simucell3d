@@ -260,9 +260,7 @@ def main(shape_zyx: tuple = (256, 256, 256),
                     slice = surf.slice(normal=slice_normal, origin=line_point)
                     unique_cell_ids = np.unique(slice[name]).astype(int)
 
-                    ax_labels.cla()
-                    ax_outlines.cla()
-
+                    ax_labels.cla(); ax_outlines.cla()
 
                     # for c in ax_outlines.collections:  # possibly better to use: for c in plt.lines (see comment)
                     #     if c.get_gid() == id:
@@ -397,7 +395,9 @@ def convert_lines_to_polycollection(x_starts: np.ndarray,
     return collections.PolyCollection(verts=verts, facecolors=color, antialiased=False, closed=True)
 
 
+@profile
 def path_to_patches(unique_cell_id, voxel_size_xyz, x_starts, x_ends, y_starts, y_ends):
+    # Might be helpful to sort and then do np.where
     try_reverse_direction = False
     destinations = []
     for x_endpoint, y_endpoint in zip(x_ends, y_ends):
