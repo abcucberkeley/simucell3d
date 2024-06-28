@@ -48,15 +48,16 @@ def uniform_mesh(
                                     rng.uniform(low=low[1], high=high[1]),
                                     rng.uniform(low=low[2], high=high[2])])
         distances = distance_matrix(np.expand_dims(nucleation_point, axis=0), grid)
-        if np.all(distances > size):
+        if np.all(distances > size*2):
             grid = np.vstack((grid, nucleation_point))
     print(f"  found {grid.shape[0]} points that don't intersect")
 
     total = pv.MultiBlock()
     for i, position in tqdm(enumerate(grid), unit=' cells', desc='Creating meshes at each nucleation point', total=grid.shape[0]):
         xyz_position = np.flip(position)
-        next_mesh = mesh.translate(xyz_position, inplace=False, transform_all_input_vectors=True)
-        next_mesh['Cell_id'] = next_mesh['Cell_id'] + i
+        next_mesh = mesh.rotate_vector(vector=rng.uniform(low=0, high=1, size=3), angle=rng.uniform(low=0, high=360), inplace=False)
+        next_mesh.translate(xyz_position, inplace=True, transform_all_input_vectors=True)
+        next_mesh['Cell_id'] = next_mesh['Cell_id'] + i + 1   # start Cell_id at 1, so that zero can be in a lablelled image for "empty"
         total.append(next_mesh)
     total = total.combine()
     print(f"Final grid:\n {total}, {total.n_cells=}, {total.number_of_cells=}, total.bounds={round_to_nearest(total.bounds,1e-7)}")

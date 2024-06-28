@@ -141,8 +141,8 @@ if __name__ == "__main__":
     global_simulation_parameters.output_folder_path_ =      path.join(path_to_script_folder, "..", "simulation_results", "python_sim_example")
     global_simulation_parameters.input_mesh_path_ =         path.join(input_meshes_folder, "sphere_meshed.vtk")  # big_sphere
     global_simulation_parameters.damping_coefficient_ =     2e-9
-    global_simulation_parameters.simulation_duration_ =     1e-4
-    global_simulation_parameters.sampling_period_ =         1e-5 
+    global_simulation_parameters.simulation_duration_ =     6e-4
+    global_simulation_parameters.sampling_period_ =         1e-6
     global_simulation_parameters.time_step_ =               1e-07
     global_simulation_parameters.min_edge_len_ =            1e-6
     global_simulation_parameters.contact_cutoff_adhesion_ = 7.5e-7

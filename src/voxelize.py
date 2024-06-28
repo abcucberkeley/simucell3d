@@ -35,7 +35,7 @@ import matplotlib.collections as collections
 # import matplotlib.style as mplstyle
 # mplstyle.use('fast')
 # print(matplotlib.pyplot.get_backend())
-
+from skimage.segmentation import flood, flood_fill
 
 
 from tqdm import tqdm
@@ -72,6 +72,14 @@ def round_to_nearest(value, base):
 
     value /= base
     value = np.round(value)
+    value *= base
+    return value
+
+def roundup_to_nearest(value, base):
+    value = np.asarray(value)
+
+    value /= base
+    value = np.ceil(value)
     value *= base
     return value
 
@@ -158,20 +166,18 @@ def voxelize_volume_with_bounds(mesh, bounds, shape, check_surface=True):
     return voi
 
 @profile
-def main(shape: tuple = (255, 256, 256),
+def main(shape_zyx: tuple = (256, 256, 256),
          input_dir: Path = Path.cwd().joinpath(r"simulation_results/python_sim_example/face_data"),
-         extent: float = 51e-6,  # Z boundary distance from zero in meters,
          bounds: tuple = None,
+         tile_volumes: bool = True,
          ):
-
-    volume_outlines = np.zeros(shape=shape, dtype=np.uint16)
-    volume_labels = np.zeros_like(volume_outlines)
+    voxel_size_xyz = np.array([x_size, y_size, z_size]) / np.flip(np.array(shape_zyx))
 
     output_dir_outlines = Path(os.path.join(input_dir.parent, "voxelized_outlines"))
     output_dir_labels = Path(os.path.join(input_dir.parent, "voxelized_labels"))
 
 
-    logger.info(f"Output files: {output_dir_outlines}  and  {output_dir_labels}")
+    logger.info(fr"Output files: {output_dir_outlines}  and  \{output_dir_labels.name}")
 
     meshfiles = sorted(Path(input_dir).iterdir(), key=os.path.getmtime, reverse=True)
     meshfiles = [meshfiles[0]]
@@ -184,10 +190,11 @@ def main(shape: tuple = (255, 256, 256),
     output_dir_labels.mkdir(parents=True, exist_ok=True)
 
 
-    for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
+    # for meshfile in tqdm(meshfiles, unit=" files", position=0, leave=True):
+    for meshfile in meshfiles:
         if meshfile.suffix.endswith(".vtk"):
 
-            logger.info(f" Reading {meshfile}")
+            logger.info(f"Reading {meshfile}")
             mesh = pv.read(meshfile)
 
             # Reduce scalar data
@@ -198,8 +205,8 @@ def main(shape: tuple = (255, 256, 256),
 
             if bounds is None:
                 bounds = mesh.bounds
-            mesh.translate(-1 * np.array(mesh.center), inplace=True)
-            print(f"   Bounds: {bounds} \nMeshbounds: {round_to_nearest(mesh.bounds, 1e-7)}")
+            mesh.translate(-1 * np.array(mesh.center), inplace=True)    # center the mesh
+            print(f"   Bounds: {bounds} \nMeshbounds: {round_to_nearest(mesh.bounds, 1e-7)} \nVoxelsize: {voxel_size_xyz}")
             mesh.set_active_scalars('face_cell_id')
             surf = mesh.extract_surface()
 
@@ -211,10 +218,25 @@ def main(shape: tuple = (255, 256, 256),
 
             center = np.array([0,0,0])
             slice_normal = np.array([0, 0, 1])   # stupid (x,y,z)
-            point_a = center + slice_normal * extent
-            point_b = center - slice_normal * extent
-            z_slice_locations = np.linspace(point_a, point_b, volume_outlines.shape[0])
+            if tile_volumes:
+                bounds = mesh.bounds
 
+            bounds = np.array(bounds)
+            bounds[1] = bounds[0] + roundup_to_nearest((bounds[1] - bounds[0]), voxel_size_xyz[0])
+            bounds[3] = bounds[2] + roundup_to_nearest((bounds[3] - bounds[2]), voxel_size_xyz[1])
+            bounds[5] = bounds[4] + roundup_to_nearest((bounds[5] - bounds[4]), voxel_size_xyz[2])
+
+
+
+            mesh_size_xyz = np.abs(np.array([bounds[1]-bounds[0],
+                                                 bounds[3]-bounds[2],
+                                                 bounds[5]-bounds[4]]))
+            volume_shape = np.flip((mesh_size_xyz/voxel_size_xyz)).astype(int)
+            volume_outlines = np.zeros(shape=volume_shape, dtype=np.uint16)
+            volume_labels = np.zeros_like(volume_outlines)
+
+            z_slices = bounds[4] + np.arange(0, volume_outlines.shape[0]) * voxel_size_xyz[2]   # start + np.arange(0, num) * step
+            z_slice_coords = np.vstack([np.zeros_like(z_slices), np.zeros_like(z_slices), z_slices]).transpose()
             # p = pvqt.BackgroundPlotter()
             # pv.global_theme.allow_empty_mesh = True
             # p.show_bounds(grid=True, location='back')
@@ -222,16 +244,19 @@ def main(shape: tuple = (255, 256, 256),
 
             name = 'face_cell_id'
             plt.style.use('dark_background')
+            logger.info(f'{volume_labels.shape=} {z_slice_coords.shape=}')
 
             dpi = 1000
             figsize = (volume_outlines.shape[2] / dpi, volume_outlines.shape[1] / dpi)
             fig_outlines, ax_outlines = plt.subplots(num=10, clear=True, figsize=figsize, dpi=dpi)
+            plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
             fig_labels, ax_labels = plt.subplots(num=11, clear=True, figsize=figsize, dpi=dpi)
+            plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
 
             if pyvoxelize:
-                voxelize_volume_with_bounds(mesh, bounds, shape=shape, check_surface=False)
+                voxelize_volume_with_bounds(mesh, bounds, shape=shape_zyx, check_surface=False)
             else:
-                for z_slice_idx, line_point in enumerate(z_slice_locations):
+                for z_slice_idx, line_point in tqdm(enumerate(z_slice_coords), unit=" z_slices", position=0, leave=True, total=len(z_slices)):
                     slice = surf.slice(normal=slice_normal, origin=line_point)
                     unique_cell_ids = np.unique(slice[name]).astype(int)
 
@@ -251,36 +276,43 @@ def main(shape: tuple = (255, 256, 256),
                         single_outline = (slice
                                           .threshold([unique_cell_id, unique_cell_id], scalars=name)
                                           .extract_surface())
+                        single_outline_size = np.abs(np.array([single_outline.bounds[1] - single_outline.bounds[0],
+                                                               single_outline.bounds[3] - single_outline.bounds[2],
+                                                                single_outline.bounds[5] - single_outline.bounds[4]]))
+                        # might what to use .strip(join=True) in here.
 
-                        starts = single_outline.lines[1:][::3]
-                        ends = single_outline.lines[2:][::3]
-                        x_starts = single_outline.points[starts][:, 0]
-                        y_starts = single_outline.points[starts][:, 1]
-                        x_ends = single_outline.points[ends][:, 0]
-                        y_ends = single_outline.points[ends][:, 1]
+                        if single_outline_size[0] > voxel_size_xyz[0] and single_outline_size[1] > voxel_size_xyz[1]:    # is this bigger than a voxel?
+                            starts = single_outline.lines[1:][::3]
+                            ends = single_outline.lines[2:][::3]
+                            x_starts = single_outline.points[starts][:, 0]
+                            y_starts = single_outline.points[starts][:, 1]
+                            x_ends = single_outline.points[ends][:, 0]
+                            y_ends = single_outline.points[ends][:, 1]
 
-                        x = np.vstack([x_starts, x_ends])
-                        y = np.vstack([y_starts, y_ends])
+                            x = np.vstack([x_starts, x_ends])
+                            y = np.vstack([y_starts, y_ends])
 
-                        segments = np.array([x, y]).transpose()
+                            segments = np.array([x, y]).transpose()
 
-                        Blue = unique_cell_id & 255
-                        Green = (unique_cell_id >> 8) & 255
-                        Red = (unique_cell_id >> 16) & 255
-                        color = (Red / 255, Green / 255, Blue / 255)
+                            Blue = unique_cell_id & 255
+                            Green = (unique_cell_id >> 8) & 255
+                            Red = (unique_cell_id >> 16) & 255
+                            color = (Red / 255, Green / 255, Blue / 255)
 
-                        # Create a LineCollection object
-                        lc = collections.LineCollection(segments, colors=color, antialiased=False, linewidths=.1)
-                        ax_outlines.add_collection(lc)
+                            # Create a LineCollection object
+                            lc = collections.LineCollection(segments, colors=color, antialiased=False, linewidths=.1)
+                            ax_outlines.add_collection(lc)
 
-                        if do_labels:
-                            pc = convert_lines_to_polycollection(x_starts, x_ends, y_starts, y_ends, color)
-                            ax_labels.add_collection(pc)
+                            if do_labels:
+                                pc = convert_lines_to_polycollection(x_starts, x_ends,
+                                                                     y_starts, y_ends,
+                                                                     color, voxel_size_xyz, unique_cell_id)
+                                ax_labels.add_collection(pc)
 
                     ax_outlines.set_xlim([bounds[0], bounds[1]])
                     ax_outlines.set_ylim([bounds[2], bounds[3]])
                     ax_outlines.axis('off')
-                    plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
+
                     fig_outlines.canvas.draw()
 
                     # Convert the canvas to a raw RGB buffer, next go back to the u16 we wanted.
@@ -315,43 +347,114 @@ def main(shape: tuple = (255, 256, 256),
 
         output_file_outlines = Path(f'{output_dir_outlines}/{meshfile.stem}_outlines.tif')
         imwrite(output_file_outlines, volume_outlines.astype(np.uint16), compression='deflate', dtype=np.uint16)
+
         output_file_labels = Path(f'{output_dir_labels}/{meshfile.stem}_labels.tif')
         imwrite(output_file_labels, volume_labels.astype(np.uint16), compression='deflate', dtype=np.uint16)
+
+        # volume_floods = np.zeros_like(volume_outlines, dtype=np.uint16)
+        # unique_cell_ids = np.unique(mesh[name]).astype(int)
+        # n_floods = 0
+        # logger.info(f'Flooding...')
+        # for unique_cell_id in unique_cell_ids:
+        #     flood_fill_start_xyz = np.array(surf.threshold([unique_cell_id, unique_cell_id], scalars=name).center)
+        #     flood_fill_start_xyz -= np.array([bounds[0], bounds[2], bounds[4]])     # move to bounds
+        #
+        #     flood_fill_start_xyz /= voxel_size_xyz # convert to voxels
+        #     flood_fill_start_zyx = np.flip(flood_fill_start_xyz).astype(int)  # convert to tuple int coordinates
+        #     if np.all(flood_fill_start_zyx >= 0) and np.all(flood_fill_start_zyx < volume_outlines.shape):
+        #         # flooded = flood(volume_outlines, tuple(flood_fill_start_zyx), tolerance=0)
+        #         flooded = flood(volume_outlines, (0,0,0), tolerance=0)
+        #         volume_floods[flooded] = unique_cell_id
+        #         n_floods += 1
+        # logger.info(f'Total floods: {n_floods}')
+        # output_file_floods = Path(f'{output_dir_outlines}/{meshfile.stem}_floods.tif')
+        # imwrite(output_file_floods, volume_floods.astype(np.uint16), compression='deflate', dtype=np.uint16)
+
 
 
 @profile
 def convert_lines_to_polycollection(x_starts: np.ndarray,
-                                              x_ends: np.ndarray,
-                                              y_starts: np.ndarray,
-                                              y_ends: np.ndarray,
-                                              color: tuple[float, float, float]
-                                              ) -> collections.PolyCollection:
+                                    x_ends: np.ndarray,
+                                    y_starts: np.ndarray,
+                                    y_ends: np.ndarray,
+                                    color: tuple[float, float, float],
+                                    voxel_size_xyz, unique_cell_id,
+                                    ) -> collections.PolyCollection:
+
+    patches, try_reverse_direction = path_to_patches(unique_cell_id, voxel_size_xyz, x_starts, x_ends, y_starts, y_ends)
+    try_reverse_direction = True
+    if try_reverse_direction:
+
+        x_ends, x_starts = x_starts, x_ends # swap starts and ends
+        y_ends, y_starts = y_starts, y_ends
+
+        reversed_patches, _ = path_to_patches(unique_cell_id, voxel_size_xyz, x_starts, x_ends, y_starts, y_ends)
+        verts = patches + reversed_patches  # stupid way to concatenate
+    else:
+        verts = patches
+
+    # Create a PolyCollection object (a list of patches)
+    return collections.PolyCollection(verts=verts, facecolors=color, antialiased=False, closed=True)
+
+
+def path_to_patches(unique_cell_id, voxel_size_xyz, x_starts, x_ends, y_starts, y_ends):
+    try_reverse_direction = False
     destinations = []
-    for a, b in zip(x_ends, y_ends):
-        idxs = np.where(x_starts == a)
-        if len(idxs[0]) == 0:
-            index = np.argmin(np.abs(x_starts - a))
-            destinations.append(index)
+    for x_endpoint, y_endpoint in zip(x_ends, y_ends):
+        idxs = np.where(x_starts == x_endpoint)  # which start is identical to this endpoint?
+        if len(idxs[0]) == 0:  # if we found no starts, find the closest start
+            distances = np.sqrt((x_starts - x_endpoint) ** 2 + (y_starts - y_endpoint) ** 2)
+            index = np.argmin(distances)
+            if distances[index] < voxel_size_xyz[0]:
+                destinations.append(index)
+            else:
+                logger.warning(f'did not find x match for cell {unique_cell_id}')
+                try_reverse_direction = True
+                destinations.append(index)
         else:
+            # loop through all of the line segments whose x_start match this x_endpoint, and find where the y coord also matches
             done = False
             for idx in idxs[0]:
-                if y_starts[idx] == b and not done:
+                if y_starts[idx] == y_endpoint and not done:
                     destinations.append(idx)
                     done = True
             if not done:
-                index = np.argmin(np.abs(y_starts - b))
-                destinations.append(index)
-    ordered_destinations = []
-    i = 0
-    for destination in destinations:
-        ordered_destinations.append(i)
-        i = destinations[i]
-    x_patch_verts = x_starts[ordered_destinations]
-    y_patch_verts = y_starts[ordered_destinations]
-    patches = np.array([x_patch_verts, y_patch_verts]).transpose()
-    # Create a PolyCollection object (a list of patches)
-    pc = collections.PolyCollection(verts=[patches], facecolors=color, antialiased=False, closed=True)
-    return pc
+                logger.warning(f'did not find y match for cell {unique_cell_id}')
+                try_reverse_direction = True
+                destinations.append(0)
+
+
+    # so "destinations" tells us what the next line segment is.  However, we could have two separate enclosed circles.
+    # so we need to start at one line segment, and follow it until it goes back to its start.  We will mark the used
+    # destinations with -1.  After the circle is complete, then we check to see if there are any other patches to do
+    # any more circles to do (e.g.
+    start = 0
+    all_patches = []
+    originals = destinations.copy()
+    while max(destinations) > 0:
+        ordered_destinations = []
+        i = start
+        for destination in destinations:
+            ordered_destinations.append(i)
+            next_destination = destinations[i]
+            # print((i, start, next_destination, destinations[i]))
+            destinations[i] = -1
+            i = next_destination
+            if i == start or i == -1:  # if we closed this path
+                break
+
+        x_patch_verts = x_starts[ordered_destinations]
+        y_patch_verts = y_starts[ordered_destinations]
+        patches = np.array([x_patch_verts, y_patch_verts]).transpose()
+        if patches.shape[0] > 2:    # make sure we have at least three line segments
+            all_patches.append(patches)
+        start = np.argmax(np.array(destinations))
+
+    # if len(all_patches) > 1:
+    #     print(f'number of patches = {len(all_patches)}')
+    if len(all_patches) == 0:
+        logger.error('no patches found')
+    return all_patches, try_reverse_direction
 
 
 if __name__ == '__main__':
