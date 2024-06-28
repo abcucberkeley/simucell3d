@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# only allow one copy of this workflow to run at a time (the group specified by workflow name)
+# cancel current workflows if they are running, so that we just run the latest queue'd.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+  
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
